@@ -18,7 +18,6 @@ esp32:
     type: arduino
 
 external_components:
-  - source: github://Passific/m5paper_esphome
 
 # Enable logging
 logger:
@@ -31,6 +30,7 @@ psram:
 api:
 
 ota:
+  platform: esphome
 
 globals:
   - id: material_icons_map
