@@ -3,26 +3,29 @@
   device_id: test-screen
   # Home assistant sensors
   # Weather conditions
-  weather_conditions: weather.my_home
+  weather_conditions: weather.forecast_zi_zhai
   # Outdoor sensors
-  outdoor_temperature: sensor.outdoor_temperature
-  outdoor_humidity: sensor.outdoor_humidity
+  outdoor_temperature: weather.forecast_zi_zhai
+  outdoor_humidity: weather.forecast_zi_zhai
   outdoor_rainfall: sensor.outdoor_rainfall
-  outdoor_wind_strength: sensor.outdoor_wind_strength
+  aircon_power: sensor.plug_mini_jp_c43a_power
   # Indoor sensors
-  indoor_temperature: sensor.indoor_temperature
-  indoor_humidity: sensor.indoor_humidity
+  indoor_temperature: sensor.co2_unit_scd40_temperature
+  indoor_humidity: sensor.co2_unit_scd40_humidity
   indoor_pressure: sensor.indoor_pressure
-  indoor_co2: sensor.indoor_co2
-  # Alarms
-  # Any counter, will be shown as number 0..9
-  lights_counter: sensor.lights_counter
-  # Alarmo status
-  alarmo_status: alarm_control_panel.alarmo
-  # Radiation alarm
-  radiation_alarm: binary_sensor.radiation_alarm
+  indoor_co2: sensor.co2_unit_scd40_carbon_dioxide
+  # Media player
+  ht_a9: media_player.ht_a9_3
+  apple_tv: media_player.rihinkurumu
+  foobar2k: media_player.foobar2000
+  # AirCon status
+  aircon: climate.eakon_remo_lapis
+  # PC monitor status
+  oled_monitor: switch.oledmonita_switch
+  # Ceiling light status
+  living_light: light.sirinkuraito_light
 
 web_server:
- 
+
 # Include main functionality file
 <<: !include .screen_base.yaml

@@ -6,11 +6,11 @@ esphome:
       then:
         - it8951e.clear
         - delay: 100ms
-        - component.update: m5paper_display
+        - it8951e.updateslow
     - priority: -100.0
       then:
         - delay: 10s
-        - component.update: m5paper_display
+        - it8951e.updateslow
 
 esp32:
   board: m5stack-grey
@@ -24,16 +24,13 @@ external_components:
 
 # Enable logging
 logger:
-  level: DEBUG
+  level: INFO
 
 # Enable psram
 psram:
 
 # Enable Home Assistant API
 api:
-
-ota:
-  platform: esphome
 
 globals:
   - id: material_icons_map
@@ -62,22 +59,30 @@ globals:
         {"mdi-water-percent", "󰖎"},
         {"mdi-molecule-co2", "󰟤"},
         {"mdi-wind-power-outline", "󱪉"},
+        {"mdi-air-conditioner", "󰀛"},
+        {"mdi-thermometer-plus", "󰸅"},
+        {"mdi-thermometer-minus", "󰸄"},
         {"mdi-home-outline", "󰚡"},
         {"mdi-tree-outline", "󰹩"},
         {"mdi-gauge", "󰊚"},
+        {"mdi-volume-minus", "󰝞"},
+        {"mdi-volume-plus", "󰝝"},
         {"mdi-battery-high", "󱊣"},
         {"mdi-battery-medium", "󱊢"},
         {"mdi-battery-low", "󱊡"},
         {"mdi-battery-alert-variant-outline", "󱃍"},
         {"mdi-battery-charging-high", "󱊦"},
         {"mdi-battery-unknown", "󰂑"},
-        {"mdi-shield-outline", "󰒙"},
-        {"mdi-shield-home-outline", "󰳋"},
-        {"mdi-shield-lock-outline", "󰳌"},
-        {"mdi-shield-moon-outline", "󱠩"},
-        {"mdi-shield-alert-outline", "󰻍"},
         {"mdi-molecule-co2", "󰟤"},
-        {"mdi-radioactive", "󰐼"},
+        {"mdi-speaker", "󰓃"},
+        {"mdi-speaker-off", "󰓄"},
+        {"mdi-lightbulb", "󰌵"},
+        {"mdi-lightbulb-off", "󰹏"},
+        {"mdi-monitor", "󰍹"},
+        {"mdi-monitor-off", "󰶐"},
+        {"mdi-play-pause", "󰐎"},
+        {"mdi-skip-previous", "󰒮"},
+        {"mdi-skip-next", "󰒭"},
         {"mdi-numeric-0-circle-outline", "󰲟"},
         {"mdi-numeric-1-circle-outline", "󰲡"},
         {"mdi-numeric-2-circle-outline", "󰲣"},
@@ -94,12 +99,18 @@ font:
   - file: 'gfonts://Roboto'
     id: normal_font
     size: 40
+  - file: 'gfonts://Roboto'
+    id: small_font
+    size: 20
   - file: 'gfonts://Roboto@medium'
     id: condition_font
     size: 80
   - file: "gfonts://Orbitron"
     id: clock_font
     size: 80
+  - file: 'gfonts://Roboto'
+    id: clock_font2
+    size: 56
   - file: "fonts/materialdesignicons-webfont.ttf"
     id: small_icons_font
     size: 50
@@ -109,9 +120,14 @@ font:
         '󰖎',    #mdi-water-percent
         '󰟤',    #mdi-molecule-co2
         '󱪉',    #mdi-wind-power-outline
+        '󰀛',    #mdi-air-conditioner
         '󰚡',    #mdi-home-outline
         '󰹩',    #mdi-tree-outline
         '󰊚',    #mdi-gauge
+        '󰝞',    #mdi-volume-minus
+        '󰝝',    #mdi-volume-plus
+        '󰸅',    #mdi-thermometer-plus
+        '󰸄',    #mdi-thermometer-minus
       ]
   - file: "fonts/materialdesignicons-webfont.ttf"
     id: weather_font
@@ -150,13 +166,17 @@ font:
     id: alarms_font
     size: 80
     glyphs: [
-        '󰒙',    #mdi-shield-outline
-        '󰳋',    #mdi-shield-home-outline
-        '󰳌',    #mdi-shield-lock-outline
-        '󱠩',    #mdi-shield-moon-outline
-        '󰻍',    #mdi-shield-alert-outline
         '󰟤',    #mdi-molecule-co2
-        '󰐼',    #mdi-radioactive
+        '󰓃',    #mdi-speaker
+        '󰓄',    #mdi-speaker-off
+        '󰌵',    #mdi-lightbulb
+        '󰹏',    #mdi-lightbulb-off
+        '󰍹',    #mdi-monitor
+        '󰶐',    #mdi-monitor-off
+        '󰐎',    #mdi-play-pause
+        '󰒮',    #mdi-skip-previous
+        '󰒭',    #mdi-skip-next
+        '󰀛',    #mdi-air-conditioner,
         '󰲟',    #mdi-numeric-0-circle-outline
         '󰲡',    #mdi-numeric-1-circle-outline
         '󰲣',    #mdi-numeric-2-circle-outline
@@ -186,14 +206,15 @@ display:
     reset_duration: 100ms
     busy_pin: GPIO27
     rotation: 0
+    # reversed: True
     reversed: False
     update_interval: never
     lambda: |-
       // Clock
-      it.strftime(25, 420, id(clock_font), "%H:%M", id(rtc_time).now());
+      it.strftime(15, 400, id(normal_font), "%Y-%m-%d %a", id(rtc_time).now());
+      it.strftime(15, 440, id(clock_font), "%H:%M", id(rtc_time).now());
+
       // Weather icon
-      Color weather_icon_color;
-      weather_icon_color.raw_32 = 0x0D;
       #if 0 // Use for testing
       std::string _conditions[] {
         "clear-night",
@@ -271,74 +292,83 @@ display:
           img = id(material_icons_map)["mdi-weather-windy-variant"];
           conditions = "windy";
       }
-      it.print(25, 55, id(weather_font), weather_icon_color, img.c_str());
-      uint base_y = 25;
+
+      uint base_y = 5;
+      it.print(5, base_y + 100, id(weather_font), img.c_str());
       if (!conditions.empty())
       {
         conditions[0] = toupper(conditions[0]);
-        it.printf(295, base_y, id(condition_font), conditions.c_str());
+        it.printf(5, base_y, id(condition_font), conditions.c_str());
       }
       #define NOT_NAN(x) ((x) == (x))
+
       // Outdoor
-      it.print(295, base_y + 100, id(small_icons_font), weather_icon_color, id(material_icons_map)["mdi-tree-outline"].c_str());
-      it.print(355, base_y + 100, id(normal_font), "Outdoor:");
+      it.rectangle(265, base_y+127, 270, 230, COLOR_ON);
+      it.rectangle(265+1, base_y+127+1, 270, 230, COLOR_ON);
+      it.line(265+45, base_y+127, 535-45, base_y+127, COLOR_OFF);
+      it.line(265+45+1, base_y+127+1, 535-45+1, base_y+127+1, COLOR_OFF);
+      it.print(275+50, base_y + 100, id(normal_font), "Outdoor");
       // Temperature
-      it.print(295, base_y + 150, id(small_icons_font), weather_icon_color, id(material_icons_map)["mdi-thermometer"].c_str());
+      it.print(275, base_y + 150, id(small_icons_font), id(material_icons_map)["mdi-thermometer"].c_str());
       float temp = id(outdoor_temperature).state;
       if (NOT_NAN(temp))
-        it.printf(355, base_y + 150, id(normal_font), "%.1f°C", temp);
+        it.printf(335, base_y + 150, id(normal_font), "%.1f°C", temp);
       else
-        it.print(355, base_y + 150, id(normal_font), "---");
+        it.print(335, base_y + 150, id(normal_font), "---");
       // Humidity
-      it.print(295, base_y + 200, id(small_icons_font), weather_icon_color, id(material_icons_map)["mdi-water-percent"].c_str());
+      it.print(275, base_y + 200, id(small_icons_font), id(material_icons_map)["mdi-water-percent"].c_str());
       float humidity = id(outdoor_humidity).state;
       if (NOT_NAN(humidity))
-        it.printf(355, base_y + 200, id(normal_font), "%.1f%%", humidity);
+        it.printf(335, base_y + 200, id(normal_font), "%.1f%%", humidity);
       else
-        it.print(355, base_y + 200, id(normal_font), "---");
-      // Rainfall
-      it.print(295, base_y + 250, id(small_icons_font), weather_icon_color, id(material_icons_map)["mdi-weather-pouring"].c_str());
-      float rainfall = id(outdoor_rainfall).state;
-      if (NOT_NAN(rainfall))
-        it.printf(355, base_y + 250, id(normal_font), "%.1f mm", rainfall);
+        it.print(335, base_y + 200, id(normal_font), "---");
+      // Pressure
+      it.print(275, base_y + 250, id(small_icons_font), id(material_icons_map)["mdi-gauge"].c_str());
+      float pressure = id(indoor_pressure).state;
+      if (NOT_NAN(pressure))
+        it.printf(335, base_y + 250, id(normal_font), "%d hPa", (int)pressure);
       else
-        it.print(355, base_y + 250, id(normal_font), "---");
+        it.print(335, base_y + 250, id(normal_font), "---");
       // Wind strength
-      it.print(295, base_y + 300, id(small_icons_font), weather_icon_color, id(material_icons_map)["mdi-wind-power-outline"].c_str());
-      float wind_strength = id(outdoor_wind_strength).state;
-      if (NOT_NAN(wind_strength))
-        it.printf(355, base_y + 300, id(normal_font), "%d km/h", (int)wind_strength);
+      it.print(275, base_y + 300, id(small_icons_font), id(material_icons_map)["mdi-wind-power-outline"].c_str());
+      float windspeed = id(outdoor_windspeed).state / 3.6;
+      if (NOT_NAN(windspeed))
+        it.printf(335, base_y + 300, id(normal_font), "%.1f m/s", windspeed);
       else
-        it.print(355, base_y + 300, id(normal_font), "---");
+        it.print(335, base_y + 300, id(normal_font), "---");
+
       // Indoor
-      it.print(560, base_y + 100, id(small_icons_font), weather_icon_color, id(material_icons_map)["mdi-home-outline"].c_str());
-      it.print(620, base_y + 100, id(normal_font), "Indoor:");
+      it.rectangle(550, base_y+127, 270-10, 230, COLOR_ON);
+      it.rectangle(550+1, base_y+127+1, 270-10, 230, COLOR_ON);
+      it.line(550+45, base_y+127, 820-45-10, base_y+127, COLOR_OFF);
+      it.line(550+45+1, base_y+127+1, 820-45-10+1, base_y+127+1, COLOR_OFF);
+      it.print(560+60, base_y + 100, id(normal_font), "Indoor");
       // Temperature
-      it.print(560, base_y + 150, id(small_icons_font), weather_icon_color, id(material_icons_map)["mdi-thermometer"].c_str());
+      it.print(560, base_y + 150, id(small_icons_font), id(material_icons_map)["mdi-thermometer"].c_str());
       temp = id(indoor_temperature).state;
       if (NOT_NAN(temp))
         it.printf(620, base_y + 150, id(normal_font), "%.1f°C", temp);
       else
         it.print(620, base_y + 150, id(normal_font), "---");
       // Humidity
-      it.print(560, base_y + 200, id(small_icons_font), weather_icon_color, id(material_icons_map)["mdi-water-percent"].c_str());
+      it.print(560, base_y + 200, id(small_icons_font), id(material_icons_map)["mdi-water-percent"].c_str());
       humidity = id(indoor_humidity).state;
       if (NOT_NAN(humidity))
         it.printf(620, base_y + 200, id(normal_font), "%.1f%%", humidity);
       else
         it.print(620, base_y + 200, id(normal_font), "---");
-      // Pressure
-      it.print(560, base_y + 250, id(small_icons_font), weather_icon_color, id(material_icons_map)["mdi-gauge"].c_str());
-      float pressure = id(indoor_pressure).state;
-      if (NOT_NAN(pressure))
-        it.printf(620, base_y + 250, id(normal_font), "%d mbar", (int)pressure);
-      else
-        it.print(620, base_y + 250, id(normal_font), "---");
       // CO2
-      it.print(560, base_y + 300, id(small_icons_font), weather_icon_color, id(material_icons_map)["mdi-molecule-co2"].c_str());
+      it.print(560, base_y + 250, id(small_icons_font), id(material_icons_map)["mdi-molecule-co2"].c_str());
       float co2 = id(indoor_co2).state;
       if (NOT_NAN(co2))
-        it.printf(620, base_y + 300, id(normal_font), "%d ppm", (int)co2);
+        it.printf(620, base_y + 250, id(normal_font), "%d ppm", (int)co2);
+      else
+        it.print(620, base_y + 250, id(normal_font), "---");
+      // Aircon Power
+      it.print(560, base_y + 300, id(small_icons_font), id(material_icons_map)["mdi-air-conditioner"].c_str());
+      float power_of_aircon = id(aircon_power).state;
+      if (NOT_NAN(power_of_aircon))
+        it.printf(620, base_y + 300, id(normal_font), "%d W", (int)power_of_aircon);
       else
         it.print(620, base_y + 300, id(normal_font), "---");
       // Battery
@@ -363,122 +393,102 @@ display:
         }
       }
       it.print(910, 10, id(battery_font), battery_icon.c_str());
-      // Alarms
-      Color alarm_enabled;
-      alarm_enabled.raw_32 = 0x0E;
-      Color alarm_disabled;
-      alarm_disabled.raw_32 = 0x03;
-      // Alarmo
-      bool alarmo_enabled = false;
-      std::string al_icon = id(material_icons_map)["mdi-shield-outline"];
-      std::string al_status = id(alarmo_status).state;
-      if (al_status == "triggered")
+
+      // Living Light
+      if(id(living_light).state)
+        it.print(870, 100, id(alarms_font), id(material_icons_map)["mdi-lightbulb"].c_str());
+      else
+        it.print(870, 100, id(alarms_font), id(material_icons_map)["mdi-lightbulb-off"].c_str());
+
+      // OLED monitor
+      if(id(oled_monitor).state)
+        it.print(870, 190, id(alarms_font), id(material_icons_map)["mdi-monitor"].c_str());
+      else
+        it.print(870, 190, id(alarms_font), id(material_icons_map)["mdi-monitor-off"].c_str());
+
+      // HT-A9
+      if(id(ht_a9).state)
       {
-        al_icon = id(material_icons_map)["mdi-shield-alert-outline"];
-        alarmo_enabled = true;
+        it.print(870, 280, id(alarms_font), id(material_icons_map)["mdi-speaker"].c_str());
+        uint base_left = 690;
+        uint base_top = 380;
+        uint base_width = 265;
+        uint base_height = 540 - base_top - 4;
+        // HT-A9
+        it.rectangle(base_left, base_top, base_width, base_height, COLOR_ON);
+        // it.rectangle(base_left+1, base_top+1, base_width, base_height, COLOR_ON);
+        // Current Volume
+        float volume = id(hta9_volume).state;
+        it.printf(base_left+115, base_top+100, id(normal_font), "%.0f", volume);
+        // Vol-
+        it.print(base_left+45, base_top+100, id(small_icons_font), id(material_icons_map)["mdi-volume-minus"].c_str());
+        // it.rectangle(720, 470, 70, 70, COLOR_ON);
+        // Vol+
+        it.print(base_left+185, base_top+100, id(small_icons_font), id(material_icons_map)["mdi-volume-plus"].c_str());
+        // it.rectangle(860, 470, 70, 70, COLOR_ON);
+
+        if(id(apple_tv).state != "standby" || id(foobar2k).state != "off")
+        {
+          // Play-Pause
+          it.print(base_left+10-5, base_top+4, id(alarms_font), id(material_icons_map)["mdi-play-pause"].c_str());
+          // it.rectangle(690, 380, 90, 80, COLOR_ON);
+          // Previous
+          it.print(base_left+100-5, base_top+4, id(alarms_font), id(material_icons_map)["mdi-skip-previous"].c_str());
+          // it.rectangle(780, 380, 90, 80, COLOR_ON);
+          // Next
+          it.print(base_left+190-10, base_top+4, id(alarms_font), id(material_icons_map)["mdi-skip-next"].c_str());
+          // it.rectangle(870, 380, 90, 80, COLOR_ON);
+        }
       }
       else
       {
-        std::string al_arm = id(alarmo_mode).state;
-        if (al_arm == "armed_home")
-        {
-            al_icon = id(material_icons_map)["mdi-shield-home-outline"];
-            alarmo_enabled = true;
-        }
-        else if (al_arm == "armed_home")
-        {
-            al_icon = id(material_icons_map)["mdi-shield-home-outline"];
-            alarmo_enabled = true;
-        }
-        else if (al_arm == "armed_night")
-        {
-            al_icon = id(material_icons_map)["mdi-shield-moon-outline"];
-            alarmo_enabled = true;
-        }
-        else if (al_arm.rfind("armed_", 0) == 0)
-        {
-            al_icon = id(material_icons_map)["mdi-shield-lock-outline"];
-            alarmo_enabled = true;
-        }
+        it.print(870, 280, id(alarms_font), id(material_icons_map)["mdi-speaker-off"].c_str());
       }
-      it.print(870, 100, id(alarms_font), alarmo_enabled ? alarm_enabled : alarm_disabled, al_icon.c_str());
-      // Radiation
-      it.print(870, 190, id(alarms_font), id(radiation_alarm).state ? alarm_enabled : alarm_disabled, id(material_icons_map)["mdi-radioactive"].c_str());
-      // Lights
-      std::string lights_icon_id;
-      float _lights = id(lights_counter).state;
-      if ((!NOT_NAN(_lights)) || (_lights < 0))
-        _lights = 0;
-      int lights = (int)_lights;
-      if (lights >= 9)
-        lights_icon_id = "mdi-numeric-9-plus-circle-outline";
-      else
-      {
-        lights_icon_id = "mdi-numeric-0-circle-outline";
-        lights_icon_id[12] += lights;
-      }
-      it.print(870, 280, id(alarms_font), (lights > 0) ? alarm_enabled : alarm_disabled, id(material_icons_map)[lights_icon_id].c_str());
-      // Rain
-      unsigned int g_left = 325;
-      unsigned int g_top = 395;
-      unsigned int g_width = 600;
+
+      // AirCon
+      // Icon
+      it.print(540, 10, id(alarms_font), id(material_icons_map)["mdi-air-conditioner"].c_str());
+      // it.rectangle(540, 10, 90, 80, COLOR_ON);
+      if(id(aircon).state != "off")
+        {
+        it.rectangle(540, 10-5, 380, 80+10, COLOR_ON);
+        // Temp-
+        it.print(630+20, 10+15, id(small_icons_font), id(material_icons_map)["mdi-thermometer-minus"].c_str());
+        // it.rectangle(630, 10, 90, 80, COLOR_ON);
+
+        // Target temperature
+        float target = id(aircon_target).state;
+        it.printf(720, 10+15, id(normal_font), "%.1f°", target);
+
+        // Temp+
+        it.print(810+20, 10+15, id(small_icons_font), id(material_icons_map)["mdi-thermometer-plus"].c_str());
+        // it.rectangle(810, 10, 90, 80, COLOR_ON);
+      } else {
+        it.rectangle(540, 10-5, 130, 80-10, COLOR_ON);
+        it.printf(630, 10+15, id(normal_font), "off");
+        }
+
+      // CO2 graph
+      unsigned int g_left = 310;
+      unsigned int g_top = 405;
+      unsigned int g_width = 360;
       unsigned int g_height = 120;
-      unsigned int max_items = 12;
-      float max_value = 4.0;
-      unsigned int item_width = g_width / max_items;
-      it.rectangle(g_left, g_top, g_width, g_height);
-      for (int i = 1; i < max_items; i++)
-        it.line(g_left + item_width * i, g_top, g_left + item_width * i, g_top + g_height);
-      unsigned int unit_height = (unsigned int) ((float) g_height / max_value);
-      for (int i = 1; i < max_value; i++)
-        it.line(g_left, g_top + g_height - i * unit_height, g_left + g_width, g_top + g_height - i * unit_height);
-      std::string forecast_str = id(precipitation_forecast).state;
-      size_t pos = 0;
-      size_t counter = 0;
-      bool last_item = false;
-      Color graph_color;
-      graph_color.raw_32 = 0x0F;
-      while (!last_item)
-      {
-        size_t found = forecast_str.find(",", pos+1);
-        std::string value_str = "";
-        if (found != std::string::npos)
-        {
-            value_str = forecast_str.substr(pos, found - pos);
-            pos = found + 1;
-        }
-        else
-        {
-            value_str = forecast_str.substr(pos);
-            last_item = true;
-        }
-        char *pEnd = NULL;
-        float value = strtof(value_str.c_str(), &pEnd);
-        //if (pEnd == NULL)
-        {
-            if (value > max_value)
-                value = max_value;
-            if (value > 0)
-            {
-                unsigned int h = ((max_value - value) / max_value) * g_height;
-                it.filled_rectangle(g_left + item_width * counter, g_top + h, item_width, g_height - h, graph_color);
-            }
-        }
-        counter++;
-        if (counter >= max_items)
-            break;
-      }
+      it.graph(g_left, g_top, id(co2_graph), COLOR_ON);
+      it.printf(g_left+105, g_top-30, id(small_font), "CO2 in the last 6h");
+      it.printf(g_left, g_top + g_height * 400 / 1000 - 16, id(small_font), "1000 ppm");
+      it.printf(g_left, g_top+g_height-14, id(small_font), "400 ppm");
+      it.line(g_left, g_top + g_height * 400 / 1000 + 5, g_left + g_width+10, g_top + g_height * 400 / 1000 + 5); // 1000 (= 1400 - 400) ppm
 
 graph:
   - id: co2_graph
     sensor: indoor_co2
     duration: 6h
     min_value: 400
-    max_value: 2400
-    width: 600
-    height: 120
+    max_value: 1400
+    width: 370
+    height: 130
     x_grid: 1h
-    y_grid: 500
+    y_grid: 200.0
     border: true
 
 touchscreen:
@@ -486,6 +496,13 @@ touchscreen:
     display: m5paper_display
     id: gt911_touchscreen
     interrupt_pin: GPIO36
+    transform:
+      mirror_x: true
+      mirror_y: false
+      swap_xy: true
+    calibration:
+      x_max: 540
+      y_max: 960
 
 wifi:
   ssid: !secret wifi_ssid
@@ -500,16 +517,19 @@ switch:
 time:
   - platform: homeassistant
     id: homeassistant_time
-    timezone: Europe/Paris
+    timezone: Asia/Tokyo
     on_time_sync:
       - bm8563.write_time
   - platform: bm8563
     id: rtc_time
-    sleep_duration: 60000ms
     on_time:
       - seconds: 0
         then:
           - component.update: m5paper_display
+      - seconds: 0
+        minutes: 0
+        then:
+          - it8951e.updateslow
 
 m5paper:
   battery_power_pin: GPIO5
@@ -557,21 +577,36 @@ sensor:
           min_value: 0
           max_value: 100
   - platform: homeassistant
+    name: HT-A9 volume
+    id: hta9_volume
+    entity_id: ${ht_a9}
+    attribute: volume_level
+    filters:
+      - multiply: 100
+  - platform: homeassistant
+    name: AirCon target temperature
+    id: aircon_target
+    entity_id: ${aircon}
+    attribute: temperature
+  - platform: homeassistant
     name: Outdoor temperature
     id: outdoor_temperature
-    entity_id: ${outdoor_temperature}
+    entity_id: ${weather_conditions}
+    attribute: temperature
   - platform: homeassistant
     name: Outdoor humidity
     id: outdoor_humidity
-    entity_id: ${outdoor_humidity}
+    entity_id: ${weather_conditions}
+    attribute: humidity
   - platform: homeassistant
-    name: Rainfall last hour
-    id: outdoor_rainfall
-    entity_id: ${outdoor_rainfall}
+    name: Wind speed
+    id: outdoor_windspeed
+    entity_id: ${weather_conditions}
+    attribute: wind_speed
   - platform: homeassistant
-    name: Wind strength
-    id: outdoor_wind_strength
-    entity_id: ${outdoor_wind_strength}
+    name: Aircon power
+    id: aircon_power
+    entity_id: ${aircon_power}
   - platform: homeassistant
     name: Indoor temperature
     id: indoor_temperature
@@ -583,15 +618,12 @@ sensor:
   - platform: homeassistant
     name: Indoor pressure
     id: indoor_pressure
-    entity_id: ${indoor_pressure}
+    entity_id: ${weather_conditions}
+    attribute: pressure
   - platform: homeassistant
     name: Indoor CO2
     id: indoor_co2
     entity_id: ${indoor_co2}
-  - platform: homeassistant
-    name: Lights counter
-    id: lights_counter
-    entity_id: ${lights_counter}
 
 text_sensor:
   - platform: homeassistant
@@ -603,19 +635,17 @@ text_sensor:
     id: sun_position
     entity_id: sun.sun
   - platform: homeassistant
-    name: Alarmo status
-    id: alarmo_status
-    entity_id: ${alarmo_status}
+    name: Apple TV 4K state
+    id: apple_tv
+    entity_id: ${apple_tv}
   - platform: homeassistant
-    name: Alarmo mode
-    id: alarmo_mode
-    entity_id: ${alarmo_status}
-    attribute: arm_mode
+    name: foobar2000 state
+    id: foobar2k
+    entity_id: ${foobar2k}
   - platform: homeassistant
-    name: Forecast
-    id: precipitation_forecast
-    entity_id: sensor.precipitation_forecast
-    attribute: hourly
+    name: AirCon state
+    id: aircon
+    entity_id: ${aircon}
 
 binary_sensor:
   - platform: gpio
@@ -625,8 +655,6 @@ binary_sensor:
     pin:
       number: GPIO37
       inverted: true
-    on_release:
-      - component.update: m5paper_display
   - platform: gpio
     name: ${device_name} BTN/PWR button
     icon: mdi:gesture-tap-button
@@ -640,6 +668,102 @@ binary_sensor:
       number: GPIO39
       inverted: true
   - platform: homeassistant
-    name: Radiation alarm
-    id: radiation_alarm
-    entity_id: ${radiation_alarm}
+    name: HT-A9
+    id: ht_a9
+    entity_id: ${ht_a9}
+  - platform: homeassistant
+    name: Living Light
+    id: living_light
+    entity_id: ${living_light}
+  - platform: homeassistant
+    name: OLED monitor
+    id: oled_monitor
+    entity_id: ${oled_monitor}
+  - platform: touchscreen
+    name: Touch Button Light
+    id: light_touch_button
+    touchscreen_id: gt911_touchscreen
+    x_min: 870
+    x_max: 960
+    y_min: 100
+    y_max: 190
+  - platform: touchscreen
+    name: Touch Button Monitor
+    id: monitor_touch_button
+    touchscreen_id: gt911_touchscreen
+    x_min: 870
+    x_max: 960
+    y_min: 190
+    y_max: 280
+  - platform: touchscreen
+    name: Touch Button HT-A9
+    id: hta9_touch_button
+    touchscreen_id: gt911_touchscreen
+    x_min: 870
+    x_max: 960
+    y_min: 280
+    y_max: 370
+  - platform: touchscreen
+    name: Touch Button Vol-
+    id: voldown_touch_button
+    touchscreen_id: gt911_touchscreen
+    x_min: 720
+    x_max: 790
+    y_min: 470
+    y_max: 540
+  - platform: touchscreen
+    name: Touch Button Vol+
+    id: volup_touch_button
+    touchscreen_id: gt911_touchscreen
+    x_min: 860
+    x_max: 930
+    y_min: 470
+    y_max: 540
+  - platform: touchscreen
+    name: Touch Button PlayPause
+    id: playpause_touch_button
+    touchscreen_id: gt911_touchscreen
+    x_min: 690
+    x_max: 780
+    y_min: 380
+    y_max: 460
+  - platform: touchscreen
+    name: Touch Button SkipPrevious
+    id: previous_touch_button
+    touchscreen_id: gt911_touchscreen
+    x_min: 780
+    x_max: 870
+    y_min: 380
+    y_max: 460
+  - platform: touchscreen
+    name: Touch Button SkipNext
+    id: next_touch_button
+    touchscreen_id: gt911_touchscreen
+    x_min: 870
+    x_max: 960
+    y_min: 380
+    y_max: 460
+  - platform: touchscreen
+    name: Touch Button AirConSwitch
+    id: aircon_switch_touch_button
+    touchscreen_id: gt911_touchscreen
+    x_min: 540
+    x_max: 630
+    y_min: 10
+    y_max: 90
+  - platform: touchscreen
+    name: Touch Button AirCon-
+    id: aircon_minus_touch_button
+    touchscreen_id: gt911_touchscreen
+    x_min: 630
+    x_max: 720
+    y_min: 10
+    y_max: 90
+  - platform: touchscreen
+    name: Touch Button AirCon+
+    id: aircon_plus_touch_button
+    touchscreen_id: gt911_touchscreen
+    x_min: 810
+    x_max: 900
+    y_min: 10
+    y_max: 90
