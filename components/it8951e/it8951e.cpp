@@ -282,10 +282,23 @@ void IT8951ESensor::write_buffer_to_display(uint16_t x, uint16_t y, uint16_t w,
 
 void IT8951ESensor::write_display() {
     this->write_command(IT8951_TCON_SYS_RUN);
-    this->write_buffer_to_display(0, 0, this->max_x, this->max_y, this->buffer_);
-    this->update_area(0, 0, this->max_x, this->max_y, update_mode_e::UPDATE_MODE_GC16);
+    this->write_buffer_to_display(this->min_x, this->min_y, this->max_x, this->max_y, this->buffer_);
+    this->update_area(this->min_x, this->min_y, this->max_x, this->max_y, update_mode_e::UPDATE_MODE_DU);   // 2 level
     this->max_x = 0;
     this->max_y = 0;
+    this->min_x = 960;
+    this->min_y = 540;
+    this->write_command(IT8951_TCON_SLEEP);
+}
+
+void IT8951ESensor::write_display_slow() {
+    this->write_command(IT8951_TCON_SYS_RUN);
+    this->write_buffer_to_display(this->min_x, this->min_y, this->max_x, this->max_y, this->buffer_);
+    this->update_area(this->min_x, this->min_y, this->max_x, this->max_y, update_mode_e::UPDATE_MODE_GC16);
+    this->max_x = 0;
+    this->max_y = 0;
+    this->min_x = 960;
+    this->min_y = 540;
     this->write_command(IT8951_TCON_SLEEP);
 }
 
@@ -322,6 +335,13 @@ void IT8951ESensor::update() {
     }
 }
 
+void IT8951ESensor::update_slow() {
+    if (this->is_ready()) {
+        this->do_update_();
+        this->write_display_slow();
+    }
+}
+
 void HOT IT8951ESensor::draw_absolute_pixel_internal(int x, int y, Color color) {
     if (x >= this->get_width_internal() || y >= this->get_height_internal() || x < 0 || y < 0) {
         // Removed to avoid too much logging
@@ -339,6 +359,14 @@ void HOT IT8951ESensor::draw_absolute_pixel_internal(int x, int y, Color color) 
 
     if (y > this->max_y) {
         this->max_y = y;
+    }
+
+    if (x < this->min_x) {
+        this->min_x = x;
+    }
+
+    if (y < this->min_y) {
+        this->min_y = y;
     }
 
     uint32_t internal_color = color.raw_32 & 0x0F;

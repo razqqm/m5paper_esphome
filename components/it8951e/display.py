@@ -23,6 +23,7 @@ IT8951ESensor = it8951e_ns.class_(
     'IT8951ESensor', cg.PollingComponent, spi.SPIDevice, display.DisplayBuffer, display.Display
 )
 ClearAction = it8951e_ns.class_("ClearAction", automation.Action)
+UpdateSlowAction = it8951e_ns.class_("UpdateSlowAction", automation.Action)
 
 it8951eModel = it8951e_ns.enum("it8951eModel")
 
@@ -61,6 +62,16 @@ CONFIG_SCHEMA = cv.All(
         }
     ),
 )
+@automation.register_action(
+    "it8951e.updateslow",
+    UpdateSlowAction,
+    automation.maybe_simple_id(
+        {
+            cv.GenerateID(): cv.use_id(IT8951ESensor),
+        }
+    ),
+)
+
 async def it8951e_clear_to_code(config, action_id, template_arg, args):
     var = cg.new_Pvariable(action_id, template_arg)
     await cg.register_parented(var, config[CONF_ID])

@@ -20,8 +20,7 @@ class IT8951ESensor : public display::DisplayBuffer,
 class IT8951ESensor : public PollingComponent, public display::DisplayBuffer,
 #endif  // VERSION_CODE(2023, 12, 0)
                       public spi::SPIDevice<spi::BIT_ORDER_MSB_FIRST, spi::CLOCK_POLARITY_LOW, spi::CLOCK_PHASE_LEADING,
-                      /* May work also with DATA_RATE_20MHZ but I noticed some errors */
-                                            spi::DATA_RATE_10MHZ> {
+                                            spi::DATA_RATE_20MHZ> {
  public:
   float get_loop_priority() const override { return 0.0f; };
   float get_setup_priority() const override { return setup_priority::PROCESSOR; };
@@ -134,6 +133,7 @@ shown in Figure 1. The use of a white image in the transition from 4-bit to
 
   void setup() override;
   void update() override;
+  void update_slow();
   void dump_config() override;
 
   display::DisplayType get_display_type() override { return IT8951DevAll[this->model_].displayType; }
@@ -167,6 +167,8 @@ shown in Figure 1. The use of a white image in the transition from 4-bit to
 
   uint32_t max_x = 0;
   uint32_t max_y = 0;
+  uint32_t min_x = 960;
+  uint32_t min_y = 540;
   uint16_t m_endian_type, m_pix_bpp;
 
 
@@ -179,8 +181,8 @@ shown in Figure 1. The use of a white image in the transition from 4-bit to
 
   void reset(void);
 
-  void wait_busy(uint32_t timeout = 100);
-  void check_busy(uint32_t timeout = 100);
+  void wait_busy(uint32_t timeout = 30);
+  void check_busy(uint32_t timeout = 30);
 
   uint16_t get_vcom();
   void set_vcom(uint16_t vcom);
@@ -205,11 +207,17 @@ shown in Figure 1. The use of a white image in the transition from 4-bit to
   void write_buffer_to_display(uint16_t x, uint16_t y, uint16_t w,
                                 uint16_t h, const uint8_t *gram);
   void write_display();
+  void write_display_slow();
 };
 
 template<typename... Ts> class ClearAction : public Action<Ts...>, public Parented<IT8951ESensor> {
  public:
   void play(Ts... x) override { this->parent_->clear(true); }
+};
+
+template<typename... Ts> class UpdateSlowAction : public Action<Ts...>, public Parented<IT8951ESensor> {
+ public:
+  void play(Ts... x) override { this->parent_->update_slow(); }
 };
 
 }  // namespace it8951e
