@@ -18,6 +18,9 @@ esp32:
     type: arduino
 
 external_components:
+  - source:
+      type: local
+      path: ./components
 
 # Enable logging
 logger:
