@@ -1,6 +1,6 @@
 # m5paper_esphome
 
-Based on https://github.com/paveldn/m5paper_esphome
+Based on https://github.com/timit3-github/m5paper_esphome
 
 Himself based on https://github.com/paveldn/m5paper_esphome
 
