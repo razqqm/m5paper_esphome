@@ -1,1 +1,711 @@
+###############################################################################
+# SUBSTITUTIONS
+###############################################################################
+substitutions:
+  devicename: m5paper               # Unique device name (hostname & entity prefix)
+  friendlyname: m5paper             # Friendly name used in Home Assistant
+  fdevicename: "M5"                 # Short device name for UI labels
+  battery_full_voltage: "4.20"      # Battery voltage at 100% (fully charged)
+  battery_empty_voltage: "3.30"     # Battery voltage at 0% (fully discharged)
 
+###############################################################################
+# ESPHome CONFIGURATION
+###############################################################################
+esphome:
+  name: ${devicename}
+  min_version: 2024.12.4
+  on_boot:
+    then:
+      - delay: 5s    # Delay for power and bus stabilization
+      - lambda: |-
+          id(cpu_speed) = ESP.getCpuFreqMHz();  // Сохранение частоты ЦП
+      - it8951e.clear         # Delay for power and bus stabilization
+      - delay: 100ms
+      - it8951e.updateslow    # Update to stabilize the display
+      - delay: 10s
+      - it8951e.updateslow
+      - lambda: |-
+          id(boot_uptime) = id(system_uptime).state;
+
+
+
+###############################################################################
+# BOARD, FRAMEWORK, PSRAM, & EXTERNAL COMPONENTS
+###############################################################################
+esp32:
+  board: m5stack-grey
+  framework:
+    type: arduino
+
+psram:
+
+external_components:
+  - source:
+      type: git
+      url: https://github.com/timit3-github/m5paper_esphome
+      ref: main
+    components: [bm8563, it8951e, m5paper]
+
+###############################################################################
+# packages (code moved to an external file)
+###############################################################################
+# DISPLAY
+packages:
+  display: !include packages/display.yaml
+  main: !include packages/main.yaml
+
+###############################################################################
+# TOUCHSCREEN (Optional: For future multi-screen control via touch)
+###############################################################################
+touchscreen:
+  - platform: gt911
+    id: gt911_touchscreen
+    display: m5paper_display
+    interrupt_pin: GPIO36
+    on_touch:
+      then:
+        - lambda: |-
+            char buf[32];
+            sprintf(buf, "(%d, %d)", touch.x, touch.y);
+            id(touch_coordinates).publish_state(buf);
+
+###############################################################################
+# GLOBAL VARIABLES
+###############################################################################
+globals:
+  - id: screen_update_interval
+    type: int
+    restore_value: yes
+    initial_value: '30'
+  - id: sensor_update_interval
+    type: int
+    restore_value: yes
+    initial_value: '30'
+  - id: startup_done
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  - id: boot_uptime
+    type: float
+    restore_value: no
+    initial_value: '0'
+  - id: cpu_speed
+    type: int
+    restore_value: no
+    initial_value: '0'
+  - id: material_icons_map
+    type: std::map<std::string, std::string>
+    restore_value: no
+    initial_value: |
+      {
+        {"mdi-fan", "\U000F0210"},
+        {"mdi-thermometer", "\U000F0510"},
+        {"mdi-home-thermometer", "\U000F0F54"},
+        {"mdi-battery-high", "\U000F12A3"},
+        {"mdi-server", "\U000F048B"},
+        {"mdi-degree", "\U000F0504"},
+        {"mdi-bed-king-outline", "\U000F0FD1"},
+        {"mdi-fridge-outline", "\U000F028F"},
+        {"mdi-door", "\U000F081A"},
+        {"mdi-battery-70", "\U000F0080"},
+        {"mdi-battery-charging", "\U000F0084"},
+        {"mdi-water-percent", "\U000F058E"},
+        {"mdi-memory", "\U000F035B"},
+        {"mdi-cpu-64-bit", "\U000F0EE0"},
+        {"mdi-timer-sand", "\U000F051F"},
+        {"mdi-checkerboard", "\U000F013A"},
+        {"mdi-square-circle", "\U000F1500"},
+        {"mdi-thermostat-box", "\U000F0891"},
+        {"mdi-speedometer", "\U000F04C5"},
+        {"mdi-numeric-1-box-multiple-outline", "\U000F03A5"},
+        {"mdi-numeric-2-box-multiple-outline", "\U000F03A8"},
+        {"mdi-numeric-3-box-multiple-outline", "\U000F03AB"},
+        {"mdi-alpha-q-box-outline", "\U000F0C1B"},
+        {"mdi-power-plug-off-outline", "\U000F1424"},
+        {"mdi-power-plug-outline", "\U000F1425"},
+        {"mdi-power-plug-battery-outline", "\U000F1C3C"},
+        {"mdi-power-plug-battery", "\U000F1C3B"},
+        {"mdi-database-check-outline", "\U000F1629"},
+        {"mdi-database-alert-outline", "\U000F1624"}
+      }
+
+###############################################################################
+# FONTS
+###############################################################################
+font:
+  - file: "gfonts://Roboto@400"
+    id: main_font
+    size: 30
+  - file: "gfonts://Roboto@700"
+    id: bold_font
+    size: 30
+  - file: "gfonts://Roboto@400"
+    id: sensor_number_font
+    size: 18
+  - file: "fonts/materialdesignicons-webfont.ttf"
+    id: icons_font
+    size: 36
+    glyphs:
+      - "\U000F0210"
+      - "\U000F0510"
+      - "\U000F0F54"
+      - "\U000F12A3"
+      - "\U000F048B"
+      - "\U000F0504"
+      - "\U000F0FD1"
+      - "\U000F028F"
+      - "\U000F081A"
+      - "\U000F0080"
+      - "\U000F0084"
+      - "\U000F058E"
+      - "\U000F035B"
+      - "\U000F0EE0"
+      - "\U000F051F"
+      - "\U000F013A"
+      - "\U000F1500"
+      - "\U000F0891"
+      - "\U000F04C5"
+      - "\U000F03A5"
+      - "\U000F03A8"
+      - "\U000F03AB"
+      - "\U000F0C1B"
+      - "\U000F1424"
+      - "\U000F1425"
+      - "\U000F1C3C"
+      - "\U000F1C3B"
+      - "\U000F1629"
+      - "\U000F1624"
+
+###############################################################################
+# NUMBERS & SELECTS (User-Adjustable Intervals)
+###############################################################################
+number:
+  - platform: template
+    name: "Display Update Interval"
+    id: display_update_interval
+    min_value: 0
+    max_value: 300
+    step: 10
+    unit_of_measurement: "s"
+    initial_value: 30
+    optimistic: true
+    set_action:
+      - lambda: |-
+          id(screen_update_interval) = (int)x;
+          ESP_LOGI("main", "Screen update interval set to: %d", id(screen_update_interval));
+
+select:
+  - platform: template
+    name: "Sensor Update Interval"
+    id: sensor_update_interval_select
+    options:
+      - "10"
+      - "30"
+      - "60"
+      - "90"
+      - "120"
+      - "240"
+      - "300"
+    initial_option: "30"
+    set_action:
+      - lambda: |-
+          id(sensor_update_interval) = atoi(x.c_str());
+          ESP_LOGI("main", "Sensor update interval set to: %d", id(sensor_update_interval));
+      - delay: 50ms
+
+###############################################################################
+# SPI & I2C CONFIGURATION
+###############################################################################
+spi:
+  clk_pin: GPIO14
+  mosi_pin: GPIO12
+  miso_pin: GPIO13
+
+i2c:
+  sda: GPIO21
+  scl: GPIO22
+  frequency: 100khz
+
+###############################################################################
+# M5PAPER HARDWARE CONFIGURATION (Battery & Main Power Control)
+###############################################################################
+m5paper:
+  battery_power_pin: GPIO5
+  main_power_pin: GPIO2
+
+###############################################################################
+# TIME CONFIGURATION
+###############################################################################
+time:
+  - platform: homeassistant
+    id: homeassistant_time
+    timezone: Asia/Aqtau
+    on_time_sync:
+      - bm8563.write_time
+  - platform: bm8563
+    id: rtc_time
+    on_time:
+      - seconds: 0
+        then:
+          - component.update: m5paper_display
+      - seconds: 0
+        minutes: 0
+        then:
+          - it8951e.updateslow
+
+###############################################################################
+# TEXT SENSORS (Diagnostic)
+###############################################################################
+text_sensor:
+  - platform: template
+    name: "Touch Coordinates"
+    id: touch_coordinates
+  - platform: homeassistant
+    id: ups_status_data
+    name: "UPS Mode"
+    entity_id: sensor.ups_status_data
+  - platform: template
+    name: "${fdevicename} Device Sensor"
+    entity_category: diagnostic
+    icon: mdi:devices
+    web_server:
+      sorting_weight: 14
+    lambda: |-
+      return {"ESP32 Control Board"};
+  - platform: version
+    name: "${fdevicename} Version"
+    entity_category: diagnostic
+    web_server:
+      sorting_weight: 15
+  - platform: wifi_info
+    ip_address:
+      name: "${fdevicename} IP Address"
+      entity_category: diagnostic
+      icon: mdi:ip
+      web_server:
+        sorting_weight: 0
+    ssid:
+      name: "${fdevicename} Connected SSID"
+      entity_category: diagnostic
+      icon: mdi:wifi
+      web_server:
+        sorting_weight: 2
+    bssid:
+      name: "${fdevicename} Connected BSSID"
+      entity_category: diagnostic
+      icon: mdi:wifi
+      web_server:
+        sorting_weight: 3
+    mac_address:
+      name: "${fdevicename} Mac Wifi Address"
+      entity_category: diagnostic
+      icon: mdi:wifi
+      web_server:
+        sorting_weight: 1
+  - platform: debug
+    reset_reason:
+      name: "${fdevicename} Reset Reason"
+      entity_category: diagnostic
+
+###############################################################################
+# CONTROLS (Buttons)
+###############################################################################
+binary_sensor:
+  - platform: gpio
+    name: "Left Button"
+    id: left_button
+    pin:
+      number: GPIO39
+      inverted: true
+    # entity_category: diagnostic
+    on_press:
+      - component.update: m5paper_display
+
+  - platform: gpio
+    name: "Right Button"
+    id: right_button
+    pin:
+      number: GPIO37
+      inverted: true
+    # entity_category: diagnostic
+    on_press:
+      - component.update: m5paper_display
+
+  - platform: gpio
+    name: "BTN/PWR Button"
+    id: btn_pwr_button
+    pin:
+      number: GPIO38
+      inverted: true
+    # entity_category: diagnostic
+    on_press:
+      - component.update: m5paper_display
+
+button:
+  - platform: template
+    name: "Force Full Update"
+    id: force_full_update
+    # entity_category: diagnostic
+    on_press:
+      - lambda: |-
+          id(m5paper_display).clear(true);
+          delay(100);
+          id(m5paper_display).update_slow();
+
+###############################################################################
+# SENSORS (Core and diagnostic)
+###############################################################################
+# SENSOR: Battery Level – Used in ROW 1, cell 5 (Battery value is calculated from battery voltage)
+sensor:
+  - platform: template
+    id: battery_level
+    name: "Battery Level"
+    unit_of_measurement: '%'
+    device_class: battery
+    update_interval: never
+    lambda: |-
+      const float V_shutdown = 3.142;
+      const float V_low = 3.268;
+      const float V_full = 4.15;
+      float voltage = id(battery_voltage).state;
+      float batt;
+      if (voltage <= V_shutdown) {
+        batt = 0.0;
+      } else if (voltage < V_low) {
+        batt = ((voltage - V_shutdown) / (V_low - V_shutdown)) * 10.0;
+      } else {
+        batt = 10.0 + ((voltage - V_low) / (V_full - V_low)) * 90.0;
+      }
+      if (batt > 100.0) batt = 100.0;
+      return batt;
+
+  # SENSOR: Temperature and Humidity – Provided by the sht3xd sensor; used in ROW 1: Temperature (cell 2) and Humidity (cell 3)
+  - platform: sht3xd
+    id: sht3xd_sensor
+    temperature:
+      name: "${fdevicename} Temperature"
+      id: m5paper_temperature
+    humidity:
+      name: "${fdevicename} Humidity"
+      id: m5paper_humidity
+    address: 0x44
+    update_interval: 10s
+  # SENSOR: Battery Voltage – Diagnostic sensor (used internally for battery level calculation)
+  - platform: adc
+    pin: GPIO35
+    id: battery_voltage
+    name: "${fdevicename} Battery Voltage"
+    attenuation: 12db
+    update_interval: never
+    filters:
+      - multiply: 2.0
+    entity_category: diagnostic
+  # SENSOR: WiFi Signal Strength – Diagnostic (not displayed in main layout)
+  - platform: wifi_signal
+    name: "${fdevicename} WiFi"
+    entity_category: diagnostic
+    icon: mdi:w
+  # SENSOR: System Uptime – Used in ROW 1, cell 4 (displays HH:MM:SS)
+  - platform: uptime
+    id: system_uptime
+    name: "System Uptime"
+    entity_category: diagnostic
+    icon: mdi:timer-sync-outline
+  # SENSOR: CPU Speed – Diagnostic sensor (not directly placed in main rows)
+  - platform: template
+    name: "${fdevicename} CPU Speed"
+    accuracy_decimals: 0
+    unit_of_measurement: Mhz
+    entity_category: diagnostic
+    icon: mdi:sine-wave
+  # SENSOR: ESP Temperature – Diagnostic sensor (used in ROW 19 alongside memory and ESP T/H data)
+  - platform: template
+    id: sys_esp_temperature
+    name: "${fdevicename} ESP Temp"
+    lambda: |-
+      return temperatureRead();
+    unit_of_measurement: °C
+    entity_category: diagnostic
+    icon: mdi:thermometer
+  # DEBUG SENSORS: Heap Free, Heap Max Block, Loop Time – All Diagnostic
+  - platform: debug
+    free:
+      name: "${fdevicename} Heap Free"
+      entity_category: diagnostic
+    block:
+      name: "${fdevicename} Heap Max Block"
+      entity_category: diagnostic
+    loop_time:
+      name: "${fdevicename} Loop Time"
+      entity_category: diagnostic
+  # SENSOR: Fan RPM 1 – Used in ROW 4, cell 1 for Fan #1
+  - platform: homeassistant
+    name: "Fan RPM 1"
+    id: rpm_fun_fan_rpm_1
+    entity_id: sensor.rpm_fun_fan_rpm_1_gpio5
+    entity_category: diagnostic
+  # SENSOR: Fan RPM 2 – Used in ROW 5, cell 1 for Fan #2
+  - platform: homeassistant
+    name: "Fan RPM 2"
+    id: rpm_fun_fan_rpm_2
+    entity_id: sensor.rpm_fun_fan_rpm_2_gpio6
+    entity_category: diagnostic
+  # SENSOR: Fan RPM 3 – Used in ROW 6, cell 1 for Fan #3
+  - platform: homeassistant
+    name: "Fan RPM 3"
+    id: rpm_fun_fan_rpm_3
+    entity_id: sensor.rpm_fun_fan_rpm_3_gpio7
+    entity_category: diagnostic
+  # SENSOR: Fan RPM 4 – Used in ROW 7, cell 1 for Fan #4 (no speed value)
+  - platform: homeassistant
+    name: "Fan RPM 4"
+    id: rpm_fun_fan_rpm_4
+    entity_id: sensor.rpm_fun_fan_rpm_4_gpio8
+    entity_category: diagnostic
+  # SENSOR: Fan RPM 5 – Used in ROW 8, cell 1 for Fan #5 (no speed value)
+  - platform: homeassistant
+    name: "Fan RPM 5"
+    id: rpm_fun_fan_rpm_5
+    entity_id: sensor.rpm_fun_fan_rpm_5_gpio9
+    entity_category: diagnostic
+  # SENSOR: Fan RPM 6 – Used in ROW 9, cell 1 for Fan #6 (no speed value)
+  - platform: homeassistant
+    name: "Fan RPM 6"
+    id: rpm_fun_fan_rpm_6
+    entity_id: sensor.rpm_fun_fan_rpm_6_gpio36
+    entity_category: diagnostic
+  # SENSOR: Fan Speed 1 – Used in ROW 4, cell 2 for Fan #1
+  - platform: homeassistant
+    name: "Fan Speed 1"
+    id: rpm_fun_fan_speed_1
+    entity_id: number.rpm_fun_fan_speed_1_gpio17
+    entity_category: diagnostic
+  # SENSOR: Fan Speed 2 – Used in ROW 5, cell 2 for Fan #2
+  - platform: homeassistant
+    name: "Fan Speed 2"
+    id: rpm_fun_fan_speed_2
+    entity_id: number.rpm_fun_fan_speed_2_gpio18
+    entity_category: diagnostic
+  # SENSOR: Fan Speed 3 – Used in ROW 6, cell 2 for Fan #3
+  - platform: homeassistant
+    name: "Fan Speed 3"
+    id: rpm_fun_fan_speed_3
+    entity_id: number.rpm_fun_fan_speed_3_gpio35
+    entity_category: diagnostic
+  # SENSOR: Fan Speed 4 – Used in ROW 7, cell 2 for Fan #4
+  - platform: homeassistant
+    name: "Fan Speed 4"
+    id: rpm_fun_fan_speed_4
+    entity_id: number.rpm_fun_fan_speed_4_gpio37
+    entity_category: diagnostic
+  # SENSOR: PVE Fan2 Speed – Used in ROW 10 (spread over 3 columns, positions 1,2,3)
+  - platform: homeassistant
+    id: pve1_fan2_speed
+    entity_id: sensor.pve1_fan2_speed
+    entity_category: diagnostic
+  # SENSOR: TEMP1 – Used in ROW 12, column 1 (Temperature sensor 1)
+  - platform: homeassistant
+    name: "TEMP1"
+    id: temp1
+    entity_id: sensor.0x00124b00292f0d2d_temperature_1
+    entity_category: diagnostic
+  # SENSOR: TEMP2 – Used in ROW 12, column 2 (Temperature sensor 2)
+  - platform: homeassistant
+    name: "TEMP2"
+    id: temp2
+    entity_id: sensor.0x00124b00292f0d2d_temperature_2
+    entity_category: diagnostic
+  # SENSOR: TEMP3 – Used in ROW 12, column 3 (Temperature sensor 3)
+  - platform: homeassistant
+    name: "TEMP3"
+    id: temp3
+    entity_id: sensor.0x00124b00292f0d2d_temperature_3
+    entity_category: diagnostic
+  # SENSOR: TEMP4 – Used in ROW 12, column 4 (Temperature sensor 4)
+  - platform: homeassistant
+    name: "TEMP4"
+    id: temp4
+    entity_id: sensor.0x00124b00292f0d2d_temperature_4
+    entity_category: diagnostic
+  # SENSOR: TEMP5 – Used in ROW 13, column 1 (Temperature sensor 5)
+  - platform: homeassistant
+    name: "TEMP5"
+    id: temp5
+    entity_id: sensor.0x00124b00292f0d2d_temperature_5
+    entity_category: diagnostic
+  # SENSOR: TEMP6 – Used in ROW 13, column 2 (Temperature sensor 6)
+  - platform: homeassistant
+    name: "TEMP6"
+    id: temp6
+    entity_id: sensor.0x00124b00292f0d2d_temperature_6
+    entity_category: diagnostic
+  # SENSOR: TEMP7 – Used in ROW 13, column 3 (Temperature sensor 7)
+  - platform: homeassistant
+    name: "TEMP7"
+    id: temp7
+    entity_id: sensor.0x00124b00292f0d2d_temperature_7
+    entity_category: diagnostic
+  # SENSOR: TEMP8 – Used in ROW 13, column 4 (Temperature sensor 8)
+  - platform: homeassistant
+    name: "TEMP8"
+    id: temp8
+    entity_id: sensor.0x00124b00292f0d2d_temperature_8
+    entity_category: diagnostic
+  # SENSOR: TEMP MS-01 – Used in ROW 14, column 1 (Additional temperature sensor)
+  - platform: homeassistant
+    name: "TEMP MS-01"
+    id: temp_ms_01
+    entity_id: sensor.temp_ms_01
+    entity_category: diagnostic
+  # SENSOR: TEMP NUC1 – Used in ROW 14, column 2 (Additional temperature sensor)
+  - platform: homeassistant
+    name: "TEMP NUC1"
+    id: temp_nuc1
+    entity_id: sensor.temp_nuc1
+    entity_category: diagnostic
+  # SENSOR: TEMP NUC2 – Used in ROW 14, column 3 (Additional temperature sensor)
+  - platform: homeassistant
+    name: "TEMP NUC2"
+    id: temp_nuc2
+    entity_id: sensor.temp_nuc2
+    entity_category: diagnostic
+  # SENSOR: TEMP PI – Used in ROW 14, column 4 (Additional temperature sensor)
+  - platform: homeassistant
+    name: "TEMP PI"
+    id: temp_pi
+    entity_id: sensor.temp_pi
+    entity_category: diagnostic
+  # SENSOR: temp_bed – Used in ROW 2, cell 1 (Bed temperature)
+  - platform: homeassistant
+    name: "temp_bed"
+    id: temp_bed
+    entity_id: sensor.0x00158d00091c44f0_temperature
+    entity_category: diagnostic
+  # SENSOR: temp_kit – Used in ROW 2, cell 2 (Kit temperature)
+  - platform: homeassistant
+    name: "temp_kit"
+    id: temp_kit
+    entity_id: sensor.0x00158d0009453e42_temperature
+    entity_category: diagnostic
+  # SENSOR: temp_corr – Used in ROW 2, cell 3 (Corridor temperature)
+  - platform: homeassistant
+    name: "temp_corr"
+    id: temp_corr
+    entity_id: sensor.0x00158d000693872a_temperature
+    entity_category: diagnostic
+  # SENSOR: UPS Input Voltage – Used in ROW 16, cell 1 (UPS voltage)
+  - platform: homeassistant
+    name: "UPS Input Voltage"
+    id: ups_input_voltage
+    entity_id: sensor.ups_input_voltage
+    entity_category: diagnostic
+  # SENSOR: UPS Battery Charge – Used in ROW 16, cell 2 (UPS battery charge)
+  - platform: homeassistant
+    name: "UPS Battery Charge"
+    id: ups_battery_charge
+    entity_id: sensor.ups_battery_charge
+    entity_category: diagnostic
+  # SENSOR: UPS Load – Used in ROW 16, cell 3 (UPS load)
+  - platform: homeassistant
+    name: "UPS Load"
+    id: ups_load
+    entity_id: sensor.ups_load
+    entity_category: diagnostic
+  # SENSOR: pve1 CPU used – Used in ROW 18, column 1 (CPU usage for Core 1)
+  - platform: homeassistant
+    name: "pve1 CPU used"
+    id: node_pve1_cpu_used
+    entity_id: sensor.node_pve1_cpu_used
+    entity_category: diagnostic
+  # SENSOR: pve2 CPU used – Used in ROW 18, column 2 (CPU usage for Core 2)
+  - platform: homeassistant
+    name: "pve2 CPU used"
+    id: node_pve2_cpu_used
+    entity_id: sensor.node_pve2_cpu_used
+    entity_category: diagnostic
+  # SENSOR: pve3 CPU used – Used in ROW 18, column 3 (CPU usage for Core 3)
+  - platform: homeassistant
+    name: "pve3 CPU used"
+    id: node_pve3_cpu_used
+    entity_id: sensor.node_pve3_cpu_used
+    entity_category: diagnostic
+  # SENSOR: pve1 Memory used % – Used in ROW 19, column 1 (Memory usage for Core 1)
+  - platform: homeassistant
+    name: "pve1 Memory used %"
+    id: node_pve1_memory_used
+    entity_id: sensor.node_pve1_memory_used_percentage
+    entity_category: diagnostic
+  # SENSOR: pve2 Memory used % – Used in ROW 19, column 2 (Memory usage for Core 2)
+  - platform: homeassistant
+    name: "pve2 Memory used %"
+    id: node_pve2_memory_used
+    entity_id: sensor.node_pve2_memory_used_percentage
+    entity_category: diagnostic
+  # SENSOR: pve3 Memory used % – Used in ROW 19, column 3 (Memory usage for Core 3)
+  - platform: homeassistant
+    name: "pve3 Memory used %"
+    id: node_pve3_memory_used
+    entity_id: sensor.node_pve3_memory_used_percentage
+    entity_category: diagnostic
+
+###############################################################################
+# SWITCH
+###############################################################################
+switch:
+  - platform: restart
+    name: "Restart ESP"
+    id: restart_switch
+    entity_category: config
+    icon: mdi:restart
+
+###############################################################################
+# INTERVALS (Periodic Tasks)
+###############################################################################
+interval:
+  - interval: 1s
+    then:
+      - lambda: |-
+          if (!id(startup_done)) {
+            id(startup_done) = true;
+            id(m5paper_display).clear(true);
+            delay(100);
+            id(m5paper_display).update_slow();
+            delay(2000);
+            id(m5paper_display).update_slow();
+          }
+          static unsigned long last_display_update = 0;
+          unsigned long now_sec = millis() / 1000;
+          if (now_sec - last_display_update >= id(screen_update_interval)) {
+            last_display_update = now_sec;
+            id(m5paper_display).update();
+          }
+
+  - interval: 1s
+    then:
+      - lambda: |-
+          static unsigned long last_sensor_update = 0;
+          unsigned long now_sec = millis() / 1000;
+          if (now_sec - last_sensor_update >= id(sensor_update_interval)) {
+            last_sensor_update = now_sec;
+            id(battery_voltage).update();
+            id(battery_level).update();
+            id(system_uptime).update();
+          }
+
+###############################################################################
+# POWER SAVING (Deep Sleep - disabled by default)
+###############################################################################
+#deep_sleep:
+#  id: deep_sleep1
+#  run_duration: 30s
+#  sleep_duration: 20min
+#  wakeup_pin:
+#    number: GPIO38
+#    inverted: true
+#  esp32_ext1_wakeup:
+#    pins: [GPIO37]
+#    mode: ALL_LOW
+
+###############################################################################
+# END OF CONFIGURATION
+###############################################################################
