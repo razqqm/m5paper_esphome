@@ -2,7 +2,10 @@
 
 Based on https://github.com/paveldn/m5paper_esphome
 
+Himself based on https://github.com/paveldn/m5paper_esphome
+
 Himself based on https://github.com/sebirdman/m5paper_esphome
+
 
 ![Screen example](./img/screen_demo.jpg)
 
