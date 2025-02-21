@@ -1,0 +1,744 @@
+###############################################################################
+# DISPLAY CONFIGURATION (Detailed Layout)
+###############################################################################
+display:
+  - platform: it8951e
+    id: m5paper_display
+    cs_pin: GPIO15
+    reset_pin: GPIO23
+    reset_duration: 100ms
+    busy_pin: GPIO27
+    rotation: 90
+    reversed: false
+    model: M5EPD
+    update_interval: never
+    lambda: |-
+      // -----------------------------------------------------------------------------
+      // Sensor Aliases:
+      // These local variables are assigned using ESPHome's id() function and refer to
+      // sensors defined in the YAML configuration (by their unique id).
+      //
+      // They allow you to easily access the sensor data (e.g. sensor->state) within your
+      // display lambda to output values on the screen.
+      // 
+      // To add a new sensor alias:
+      // 1. In your YAML configuration, define a sensor with a unique id, for example:
+      //      - platform: template
+      //        id: my_custom_sensor
+      //        name: "My Custom Sensor"
+      //        ... (other configuration)
+      // 
+      // 2. In this code block, create a local variable alias by using the id() function:
+      //      auto sensor_custom = id(my_custom_sensor);
+      // 
+      // Now, sensor_custom->state will hold the current value of "My Custom Sensor".
+      // -----------------------------------------------------------------------------
+            
+      // ----- Sensor Aliases (Assign sensor IDs to local variables)
+      auto sensor_esp_temp    = id(m5paper_temperature);  // ESP temperature sensor (displayed in ROW 1, cell 2)
+      auto sensor_esp_hum     = id(m5paper_humidity);       // ESP humidity sensor (displayed in ROW 1, cell 3)
+      auto sensor_battery     = id(battery_level);          // Calculated battery level (displayed in ROW 1, cell 5)
+
+      auto sensor_fan_rpm_1   = id(rpm_fun_fan_rpm_1);      // Fan RPM sensor for Fan #1 (ROW 4, cell 1)
+      auto sensor_fan_speed_1 = id(rpm_fun_fan_speed_1);    // Fan speed sensor for Fan #1 (ROW 4, cell 2)
+      auto sensor_fan_rpm_2   = id(rpm_fun_fan_rpm_2);      // Fan RPM sensor for Fan #2 (ROW 5, cell 1)
+      auto sensor_fan_speed_2 = id(rpm_fun_fan_speed_2);    // Fan speed sensor for Fan #2 (ROW 5, cell 2)
+      auto sensor_fan_rpm_3   = id(rpm_fun_fan_rpm_3);      // Fan RPM sensor for Fan #3 (ROW 6, cell 1)
+      auto sensor_fan_speed_3 = id(rpm_fun_fan_speed_3);    // Fan speed sensor for Fan #3 (ROW 6, cell 2)
+      auto sensor_fan_rpm_4   = id(rpm_fun_fan_rpm_4);      // Fan RPM sensor for Fan #4 (ROW 7, cell 1)
+      auto sensor_fan_rpm_5   = id(rpm_fun_fan_rpm_5);      // Fan RPM sensor for Fan #5 (ROW 8, cell 1)
+      auto sensor_fan_rpm_6   = id(rpm_fun_fan_rpm_6);      // Fan RPM sensor for Fan #6 (ROW 9, cell 1)
+
+      auto sensor_temp1       = id(temp1);                // Temperature sensor 1 (ROW 12, column 1)
+      auto sensor_temp2       = id(temp2);                // Temperature sensor 2 (ROW 12, column 2)
+      auto sensor_temp3       = id(temp3);                // Temperature sensor 3 (ROW 12, column 3)
+      auto sensor_temp4       = id(temp4);                // Temperature sensor 4 (ROW 12, column 4)
+      auto sensor_temp5       = id(temp5);                // Temperature sensor 5 (ROW 13, column 1)
+      auto sensor_temp6       = id(temp6);                // Temperature sensor 6 (ROW 13, column 2)
+      auto sensor_temp7       = id(temp7);                // Temperature sensor 7 (ROW 13, column 3)
+      auto sensor_temp8       = id(temp8);                // Temperature sensor 8 (ROW 13, column 4)
+
+      auto sensor_temp_ms     = id(temp_ms_01);           // Additional temperature sensor MS-01 (ROW 14, column 1)
+      auto sensor_temp_nuc1   = id(temp_nuc1);            // Additional temperature sensor NUC1 (ROW 14, column 2)
+      auto sensor_temp_nuc2   = id(temp_nuc2);            // Additional temperature sensor NUC2 (ROW 14, column 3)
+      auto sensor_temp_pi     = id(temp_pi);              // Additional temperature sensor PI (ROW 14, column 4)
+
+      auto sensor_ups_voltage = id(ups_input_voltage);    // UPS input voltage sensor (ROW 16, cell 1)
+      auto sensor_ups_status  = id(ups_status_data);        // UPS status sensor (ROW 16, cell 2)
+      auto sensor_ups_battery = id(ups_battery_charge);     // UPS battery charge sensor (ROW 16, cell 3)
+      auto sensor_ups_load    = id(ups_load);               // UPS load sensor (ROW 16, cell 4)
+
+      auto sensor_cpu1        = id(node_pve1_cpu_used);     // CPU usage sensor for Core 1 (ROW 18, column 1)
+      auto sensor_cpu2        = id(node_pve2_cpu_used);     // CPU usage sensor for Core 2 (ROW 18, column 2)
+      auto sensor_cpu3        = id(node_pve3_cpu_used);     // CPU usage sensor for Core 3 (ROW 18, column 3)
+
+      auto sensor_mem1        = id(node_pve1_memory_used);  // Memory usage sensor for Core 1 (ROW 19, column 1)
+      auto sensor_mem2        = id(node_pve2_memory_used);  // Memory usage sensor for Core 2 (ROW 19, column 2)
+      auto sensor_mem3        = id(node_pve3_memory_used);  // Memory usage sensor for Core 3 (ROW 19, column 3)
+
+      auto sensor_bed         = id(temp_bed);             // Bed temperature sensor (ROW 2, cell 1)
+      auto sensor_kit         = id(temp_kit);             // Kit temperature sensor (ROW 2, cell 2)
+      auto sensor_corr        = id(temp_corr);            // Corridor temperature sensor (ROW 2, cell 3)
+
+
+      // New variables for ROW 10 (data from HA)
+      auto sensor_pve1_fan2_speed   = id(pve1_fan2_speed);
+      auto sensor_pve1_fan2_speed_2 = id(pve1_fan2_speed);
+      auto sensor_pve1_fan2_speed_3 = id(pve1_fan2_speed);
+      
+      // ----- Icon Definitions (Icon glyphs from material_icons_map)
+      std::string icon_thermo_orig   = id(material_icons_map)["mdi-thermometer"];
+      std::string icon_water         = id(material_icons_map)["mdi-water-percent"];
+      std::string icon_batt70        = id(material_icons_map)["mdi-battery-70"];
+      std::string icon_battChg       = id(material_icons_map)["mdi-battery-charging"];
+      std::string icon_plugOn        = id(material_icons_map)["mdi-power-plug-outline"];
+      std::string icon_plugOff       = id(material_icons_map)["mdi-power-plug-off-outline"];
+      std::string icon_plugBatt      = id(material_icons_map)["mdi-power-plug-battery-outline"];
+      std::string icon_dbCheck       = id(material_icons_map)["mdi-database-check-outline"];
+      std::string icon_dbAlert       = id(material_icons_map)["mdi-database-alert-outline"];
+      std::string icon_ups_service   = id(material_icons_map)["mdi-power-plug-battery"];
+      std::string icon_cpu           = id(material_icons_map)["mdi-cpu-64-bit"];
+      std::string icon_mem           = id(material_icons_map)["mdi-memory"];
+      
+      // ----- Additional glyphs for layout elements
+      const char* glyph_row3         = "\U000F013A";  // Checkerboard icon for row header
+      const char* glyph_fan_left     = "\U000F0210";  // Fan icon (left side)
+      const char* glyph_speed_right  = "\U000F04C5";  // Speedometer icon (right side)
+      const char* glyph_thermo       = "\U000F0510";  // Thermometer icon
+      const char* glyph_temp_service = "\U000F0F54";  // Home-thermometer icon
+      
+      // ----- Number Formatting Function (formats sensor values)
+      auto format_value = [&](float value, char* buf) {
+        if (value >= 1000 && value < 10000) {
+          int ival = (int)value;
+          char tmp[10];
+          sprintf(tmp, "%d", ival);
+          if (strlen(tmp) == 4) {
+            buf[0] = tmp[0];
+            buf[1] = ' ';
+            buf[2] = tmp[1];
+            buf[3] = tmp[2];
+            buf[4] = tmp[3];
+            buf[5] = '\0';
+          } else {
+            sprintf(buf, "%d", ival);
+          }
+        } else {
+          sprintf(buf, "%.0f", value);
+        }
+      };
+      
+      // ----- Layout Settings (constants for row height, text size, etc.)
+      const int ROW_HEIGHT1      = 60;
+      const int ROW_HEIGHT_OTHER = 50;
+      const int TEXT_SIZE        = 24;
+      const int ICON_SIZE        = 28;
+      const int BASELINE_DELTA   = 30;
+      auto center_text_y = [&](int row_top, int row_height, int font_size) -> int {
+        return row_top + (row_height + font_size) / 2 - BASELINE_DELTA;
+      };
+      int cur_y = 0;
+      auto draw_row = [&](int columns_count, const std::vector<int> &col_widths, int row_height) {
+        // Draws the horizontal divider and vertical column lines for the row
+        it.rectangle(0, cur_y, 540, row_height, COLOR_ON);
+        int x_accum = 0;
+        for (int i = 0; i < columns_count - 1; i++) {
+          x_accum += col_widths[i];
+          it.line(x_accum, cur_y, x_accum, cur_y + row_height, COLOR_ON);
+        }
+        cur_y += row_height;
+      };
+      
+      // ----- Time and Uptime Calculation (for display in ROW 1)
+      auto now = id(homeassistant_time).now();
+      float raw_uptime = id(system_uptime).state - id(boot_uptime);
+      if (raw_uptime < 0) raw_uptime = 0;
+      int up_sec = (int) raw_uptime;
+      int hh = up_sec / 3600;
+      int mm = (up_sec % 3600) / 60;
+      int ss = up_sec % 60;
+      
+      // =====================================================
+      // ROW 1: Time | Temperature | Humidity | Uptime | Battery
+      // Displays current time, device temperature, humidity, uptime, and battery level.
+      draw_row(5, {95, 107, 108, 130, 100}, ROW_HEIGHT1);
+      {
+        int row_top = cur_y - ROW_HEIGHT1;
+        int ty = center_text_y(row_top, ROW_HEIGHT1, TEXT_SIZE) + 5;
+        // Cell 1: Time (HH:MM)
+        it.printf(10, ty, id(main_font), "%02d:%02d", now.hour, now.minute);
+        // Cell 2: Temperature
+        int x_temp = 95 + 10;
+        it.print(x_temp, ty - 2, id(icons_font), icon_thermo_orig.c_str());
+        x_temp += 35;
+        {
+          char buf[10];
+          if (isnan(sensor_esp_temp->state))
+            sprintf(buf, "---");
+          else
+            sprintf(buf, "%.0f°", sensor_esp_temp->state);
+          it.printf(x_temp, ty, id(main_font), "%s", buf);
+        }
+        // Cell 3: Humidity
+        int x_hum = 202 + 10;
+        it.print(x_hum, ty - 2, id(icons_font), icon_water.c_str());
+        x_hum += 25;
+        {
+          char buf[10];
+          if (isnan(sensor_esp_hum->state))
+            sprintf(buf, "---");
+          else
+            sprintf(buf, "%.0f%%", sensor_esp_hum->state);
+          it.printf(x_hum, ty, id(main_font), " %s", buf);
+        }
+        // Cell 4: Uptime (HH:MM:SS)
+        int x_uptime = 310 + 10;
+        if (up_sec < 120) {
+          it.printf(x_uptime, ty, id(main_font), "00:00:00");
+        } else {
+          it.printf(x_uptime, ty, id(main_font), "%02d:%02d:%02d", hh, mm, ss);
+        }
+        // Cell 5: Battery Level (percentage)
+        int x_batt = 440 + 5;
+        if (!isnan(sensor_battery->state)) {
+          float batt = sensor_battery->state;
+          std::string batt_icon = (batt < 99.0f) ? "mdi-battery-70" : "mdi-battery-charging";
+          it.print(x_batt, ty - 2, id(icons_font), id(material_icons_map)[batt_icon].c_str());
+          if (batt == 100.0f)
+            it.printf(480, ty, id(main_font), "%3s", "OK");
+          else
+            it.printf(480, ty, id(main_font), "%3.0f", batt);
+        }
+      }
+      
+      // =====================================================
+      // ROW 2: Bed, Kit, Corr
+      // Displays sensor data for Bed temperature, Kit temperature, and Corridor temperature.
+      draw_row(3, {180, 180, 180}, ROW_HEIGHT_OTHER);
+      {
+        int row_top = cur_y - ROW_HEIGHT_OTHER;
+        int ty = center_text_y(row_top, ROW_HEIGHT_OTHER, TEXT_SIZE);
+        it.print(10, ty - 2, id(icons_font), id(material_icons_map)["mdi-bed-king-outline"].c_str());
+        {
+          char buf[10];
+          if (isnan(sensor_bed->state))
+            sprintf(buf, "---");
+          else
+            sprintf(buf, "%.1f°", sensor_bed->state);
+          it.printf(50, ty, id(main_font), " %s", buf);
+        }
+        it.print(190, ty - 2, id(icons_font), id(material_icons_map)["mdi-fridge-outline"].c_str());
+        {
+          char buf[10];
+          if (isnan(sensor_kit->state))
+            sprintf(buf, "---");
+          else
+            sprintf(buf, "%.1f°", sensor_kit->state);
+          it.printf(230, ty, id(main_font), " %s", buf);
+        }
+        it.print(370, ty - 2, id(icons_font), id(material_icons_map)["mdi-door"].c_str());
+        {
+          char buf[10];
+          if (isnan(sensor_corr->state))
+            sprintf(buf, "---");
+          else
+            sprintf(buf, "%.1f°", sensor_corr->state);
+          it.printf(410, ty, id(main_font), " %s", buf);
+        }
+      }
+      
+      // =====================================================
+      // ROW 3: FAN SERVICE Header
+      // Header row indicating the start of FAN SERVICE data.
+      draw_row(1, {540}, ROW_HEIGHT_OTHER);
+      {
+        int row_top = cur_y - ROW_HEIGHT_OTHER;
+        it.print(10, row_top + 8, id(icons_font), glyph_row3);
+        int ty = center_text_y(row_top, ROW_HEIGHT_OTHER, TEXT_SIZE);
+        it.printf(60, ty, id(bold_font), "FAN SERVICE");
+      }
+      
+      // ----- Helper Functions for Rows 4–9 (FAN SERVICE) -----
+      auto print_r_field = [&](int x, int ty, int index, float val) {
+        it.print(x, ty - 2, id(icons_font), glyph_fan_left);
+        x += 35;
+        {
+          char num_buf[10];
+          sprintf(num_buf, "%d", index);
+          it.print(x, ty, id(sensor_number_font), num_buf);
+        }
+        x += 20;
+        if (isnan(val)) {
+          it.printf(x, ty, id(main_font), " ---");
+        } else {
+          char formatted[10];
+          format_value(val, formatted);
+          it.printf(x, ty, id(main_font), " %s RPM", formatted);
+        }
+      };
+      auto print_s_field = [&](int x, int ty, int index, float val) {
+        it.print(x, ty - 2, id(icons_font), glyph_speed_right);
+        x += 35;
+        {
+          char num_buf[10];
+          sprintf(num_buf, "%d", index);
+          it.print(x, ty, id(sensor_number_font), num_buf);
+        }
+        x += 20;
+        if (isnan(val)) {
+          it.printf(x, ty, id(main_font), " ---");
+        } else {
+          char formatted[10];
+          format_value(val, formatted);
+          it.printf(x, ty, id(main_font), " %s%%", formatted);
+        }
+      };
+      
+      // =====================================================
+      // ROW 4: R1 / S1
+      // Displays Fan RPM (R1) and Fan Speed (S1) for Fan #1.
+      draw_row(2, {270, 270}, ROW_HEIGHT_OTHER);
+      {
+        int row_top = cur_y - ROW_HEIGHT_OTHER;
+        int ty = center_text_y(row_top, ROW_HEIGHT_OTHER, TEXT_SIZE);
+        print_r_field(10, ty, 1, sensor_fan_rpm_1->state);
+        print_s_field(280, ty, 1, sensor_fan_speed_1->state);
+      }
+      
+      // =====================================================
+      // ROW 5: R2 / S2
+      // Displays Fan RPM (R2) and Fan Speed (S2) for Fan #2.
+      draw_row(2, {270, 270}, ROW_HEIGHT_OTHER);
+      {
+        int row_top = cur_y - ROW_HEIGHT_OTHER;
+        int ty = center_text_y(row_top, ROW_HEIGHT_OTHER, TEXT_SIZE);
+        print_r_field(10, ty, 2, sensor_fan_rpm_2->state);
+        print_s_field(280, ty, 2, sensor_fan_speed_2->state);
+      }
+      
+      // =====================================================
+      // ROW 6: R3 / S3
+      // Displays Fan RPM (R3) and Fan Speed (S3) for Fan #3.
+      draw_row(2, {270, 270}, ROW_HEIGHT_OTHER);
+      {
+        int row_top = cur_y - ROW_HEIGHT_OTHER;
+        int ty = center_text_y(row_top, ROW_HEIGHT_OTHER, TEXT_SIZE);
+        print_r_field(10, ty, 3, sensor_fan_rpm_3->state);
+        print_s_field(280, ty, 3, sensor_fan_speed_3->state);
+      }
+      
+      // =====================================================
+      // ROW 7: R4 / S4 (S4 = 0.0f)
+      // Displays Fan RPM for Fan #4; no speed value.
+      draw_row(2, {270, 270}, ROW_HEIGHT_OTHER);
+      {
+        int row_top = cur_y - ROW_HEIGHT_OTHER;
+        int ty = center_text_y(row_top, ROW_HEIGHT_OTHER, TEXT_SIZE);
+        print_r_field(10, ty, 4, sensor_fan_rpm_4->state);
+        print_s_field(280, ty, 4, 0.0f);
+      }
+      
+      // =====================================================
+      // ROW 8: R5 / S5 (S5 = 0.0f)
+      // Displays Fan RPM for Fan #5; no speed value.
+      draw_row(2, {270, 270}, ROW_HEIGHT_OTHER);
+      {
+        int row_top = cur_y - ROW_HEIGHT_OTHER;
+        int ty = center_text_y(row_top, ROW_HEIGHT_OTHER, TEXT_SIZE);
+        print_r_field(10, ty, 5, sensor_fan_rpm_5->state);
+        print_s_field(280, ty, 5, 0.0f);
+      }
+      
+      // =====================================================
+      // ROW 9: R6 / S6 (S6 = 0.0f)
+      // Displays Fan RPM for Fan #6; no speed value.
+      draw_row(2, {270, 270}, ROW_HEIGHT_OTHER);
+      {
+        int row_top = cur_y - ROW_HEIGHT_OTHER;
+        int ty = center_text_y(row_top, ROW_HEIGHT_OTHER, TEXT_SIZE);
+        print_r_field(10, ty, 6, sensor_fan_rpm_6->state);
+        print_s_field(280, ty, 6, 0.0f);
+      }
+      
+      // =====================================================
+      // ROW 10: PVE – Data from sensor.pve1_fan2_speed
+      // Displays three values (indexed 1,2,3) from sensor.pve1_fan2_speed.
+      draw_row(3, {180, 180, 180}, ROW_HEIGHT_OTHER);
+      {
+        int row_top = cur_y - ROW_HEIGHT_OTHER;
+        int ty = center_text_y(row_top, ROW_HEIGHT_OTHER, TEXT_SIZE);
+        {
+          int x = 10;
+          it.print(x, ty - 2, id(icons_font), id(material_icons_map)["mdi-numeric-1-box-multiple-outline"].c_str());
+          x += 35;
+          if (isnan(sensor_pve1_fan2_speed->state))
+            it.printf(x, ty, id(main_font), " ---");
+          else {
+            char formatted[10];
+            format_value(sensor_pve1_fan2_speed->state, formatted);
+            it.printf(x, ty, id(main_font), " %s", formatted);
+          }
+        }
+        {
+          int x = 190;
+          it.print(x, ty - 2, id(icons_font), id(material_icons_map)["mdi-numeric-2-box-multiple-outline"].c_str());
+          x += 35;
+          if (isnan(sensor_pve1_fan2_speed_2->state))
+            it.printf(x, ty, id(main_font), " ---");
+          else {
+            char formatted[10];
+            format_value(sensor_pve1_fan2_speed_2->state, formatted);
+            it.printf(x, ty, id(main_font), " %s", formatted);
+          }
+        }
+        {
+          int x = 370;
+          it.print(x, ty - 2, id(icons_font), id(material_icons_map)["mdi-numeric-3-box-multiple-outline"].c_str());
+          x += 35;
+          if (isnan(sensor_pve1_fan2_speed_3->state))
+            it.printf(x, ty, id(main_font), " ---");
+          else {
+            char formatted[10];
+            format_value(sensor_pve1_fan2_speed_3->state, formatted);
+            it.printf(x, ty, id(main_font), " %s", formatted);
+          }
+        }
+      }
+      
+      // =====================================================
+      // ROW 11: TEMP SERVICE Header
+      // Header row indicating the start of Temperature Service section.
+      draw_row(1, {540}, ROW_HEIGHT_OTHER);
+      {
+        int row_top = cur_y - ROW_HEIGHT_OTHER;
+        it.print(10, row_top + 8, id(icons_font), glyph_temp_service);
+        int ty = center_text_y(row_top, ROW_HEIGHT_OTHER, TEXT_SIZE);
+        it.printf(60, ty, id(bold_font), "TEMP SERVICE");
+      }
+      
+      // =====================================================
+      // ROW 12: Sensors 1..4 – Temperature values for sensors 1 to 4
+      draw_row(4, {135, 135, 135, 135}, ROW_HEIGHT_OTHER);
+      {
+        int row_top = cur_y - ROW_HEIGHT_OTHER;
+        int ty = center_text_y(row_top, ROW_HEIGHT_OTHER, TEXT_SIZE);
+        {
+          int x = 10;
+          it.print(x, ty - 2, id(icons_font), glyph_thermo);
+          x += 35;
+          it.print(x, ty, id(sensor_number_font), "1");
+          x += 10;
+          if (isnan(sensor_temp1->state))
+            it.printf(x, ty, id(main_font), " ---");
+          else {
+            char formatted[10];
+            format_value(sensor_temp1->state, formatted);
+            it.printf(x, ty, id(main_font), " %s°", formatted);
+          }
+        }
+        {
+          int x = 145;
+          it.print(x, ty - 2, id(icons_font), glyph_thermo);
+          x += 35;
+          it.print(x, ty, id(sensor_number_font), "2");
+          x += 10;
+          if (isnan(sensor_temp2->state))
+            it.printf(x, ty, id(main_font), " ---");
+          else {
+            char formatted[10];
+            format_value(sensor_temp2->state, formatted);
+            it.printf(x, ty, id(main_font), " %s°", formatted);
+          }
+        }
+        {
+          int x = 280;
+          it.print(x, ty - 2, id(icons_font), glyph_thermo);
+          x += 35;
+          it.print(x, ty, id(sensor_number_font), "3");
+          x += 10;
+          if (isnan(sensor_temp3->state))
+            it.printf(x, ty, id(main_font), " ---");
+          else {
+            char formatted[10];
+            format_value(sensor_temp3->state, formatted);
+            it.printf(x, ty, id(main_font), " %s°", formatted);
+          }
+        }
+        {
+          int x = 415;
+          it.print(x, ty - 2, id(icons_font), glyph_thermo);
+          x += 35;
+          it.print(x, ty, id(sensor_number_font), "4");
+          x += 10;
+          if (isnan(sensor_temp4->state))
+            it.printf(x, ty, id(main_font), " ---");
+          else {
+            char formatted[10];
+            format_value(sensor_temp4->state, formatted);
+            it.printf(x, ty, id(main_font), " %s°", formatted);
+          }
+        }
+      }
+      
+      // =====================================================
+      // ROW 13: Sensors 5..8 – Temperature values for sensors 5 to 8
+      draw_row(4, {135, 135, 135, 135}, ROW_HEIGHT_OTHER);
+      {
+        int row_top = cur_y - ROW_HEIGHT_OTHER;
+        int ty = center_text_y(row_top, ROW_HEIGHT_OTHER, TEXT_SIZE);
+        {
+          int x = 10;
+          it.print(x, ty - 2, id(icons_font), glyph_thermo);
+          x += 35;
+          it.print(x, ty, id(sensor_number_font), "5");
+          x += 10;
+          if (isnan(sensor_temp5->state))
+            it.printf(x, ty, id(main_font), " ---");
+          else {
+            char formatted[10];
+            format_value(sensor_temp5->state, formatted);
+            it.printf(x, ty, id(main_font), " %s°", formatted);
+          }
+        }
+        {
+          int x = 145;
+          it.print(x, ty - 2, id(icons_font), glyph_thermo);
+          x += 35;
+          it.print(x, ty, id(sensor_number_font), "6");
+          x += 10;
+          if (isnan(sensor_temp6->state))
+            it.printf(x, ty, id(main_font), " ---");
+          else {
+            char formatted[10];
+            format_value(sensor_temp6->state, formatted);
+            it.printf(x, ty, id(main_font), " %s°", formatted);
+          }
+        }
+        {
+          int x = 280;
+          it.print(x, ty - 2, id(icons_font), glyph_thermo);
+          x += 35;
+          it.print(x, ty, id(sensor_number_font), "7");
+          x += 10;
+          if (isnan(sensor_temp7->state))
+            it.printf(x, ty, id(main_font), " ---");
+          else {
+            char formatted[10];
+            format_value(sensor_temp7->state, formatted);
+            it.printf(x, ty, id(main_font), " %s°", formatted);
+          }
+        }
+        {
+          int x = 415;
+          it.print(x, ty - 2, id(icons_font), glyph_thermo);
+          x += 35;
+          it.print(x, ty, id(sensor_number_font), "8");
+          x += 10;
+          if (isnan(sensor_temp8->state))
+            it.printf(x, ty, id(main_font), " ---");
+          else {
+            char formatted[10];
+            format_value(sensor_temp8->state, formatted);
+            it.printf(x, ty, id(main_font), " %s°", formatted);
+          }
+        }
+      }
+      
+      // =====================================================
+      // ROW 14: MS, N1, N2, PI – Additional diagnostic sensor values
+      // Displays values for sensors: MS, N1, N2, and PI.
+      draw_row(4, {135, 135, 135, 135}, ROW_HEIGHT_OTHER);
+      {
+        int row_top = cur_y - ROW_HEIGHT_OTHER;
+        int ty = center_text_y(row_top, ROW_HEIGHT_OTHER, TEXT_SIZE);
+        if (isnan(sensor_temp_ms->state)) {
+          it.printf(10, ty, id(main_font), "MS ---");
+        } else {
+          it.print(10, ty - 2, id(icons_font), icon_mem.c_str());
+          char buf[10];
+          sprintf(buf, "%.1f%%", sensor_temp_ms->state);
+          int x = 45;
+          it.print(x, ty, id(sensor_number_font), "1");
+          x += 20;
+          it.printf(x, ty, id(main_font), " %s", buf);
+        }
+        if (isnan(sensor_temp_nuc1->state)) {
+          it.printf(145, ty, id(main_font), "N1 ---");
+        } else {
+          it.print(145, ty - 2, id(icons_font), icon_cpu.c_str());
+          char buf[10];
+          sprintf(buf, "%.1f%%", sensor_temp_nuc1->state);
+          int x = 180;
+          it.print(x, ty, id(sensor_number_font), "1");
+          x += 20;
+          it.printf(x, ty, id(main_font), " %s", buf);
+        }
+        if (isnan(sensor_temp_nuc2->state)) {
+          it.printf(280, ty, id(main_font), "N2 ---");
+        } else {
+          it.print(280, ty - 2, id(icons_font), icon_cpu.c_str());
+          char buf[10];
+          sprintf(buf, "%.1f%%", sensor_temp_nuc2->state);
+          int x = 315;
+          it.print(x, ty, id(sensor_number_font), "2");
+          x += 20;
+          it.printf(x, ty, id(main_font), " %s", buf);
+        }
+        if (isnan(sensor_temp_pi->state)) {
+          it.printf(415, ty, id(main_font), "PI ---");
+        } else {
+          it.print(415, ty - 2, id(icons_font), icon_cpu.c_str());
+          char buf[10];
+          sprintf(buf, "%.1f%%", sensor_temp_pi->state);
+          int x = 450;
+          it.print(x, ty, id(sensor_number_font), "3");
+          x += 20;
+          it.printf(x, ty, id(main_font), " %s", buf);
+        }
+      }
+      
+      // =====================================================
+      // ROW 15: UPS SERVICE Header
+      // Header row indicating the start of UPS SERVICE data.
+      draw_row(1, {540}, ROW_HEIGHT_OTHER);
+      {
+        int row_top = cur_y - ROW_HEIGHT_OTHER;
+        it.print(10, row_top + 8, id(icons_font), icon_ups_service.c_str());
+        int ty = center_text_y(row_top, ROW_HEIGHT_OTHER, TEXT_SIZE);
+        it.printf(60, ty, id(bold_font), "UPS SERVICE");
+      }
+      
+      // =====================================================
+      // ROW 16: UPS (Vin, Mode, Battery, Load)
+      // Displays UPS input voltage, status, battery charge, and load.
+      draw_row(4, {135, 135, 135, 135}, ROW_HEIGHT_OTHER);
+      {
+        int row_top = cur_y - ROW_HEIGHT_OTHER;
+        int ty = center_text_y(row_top, ROW_HEIGHT_OTHER, TEXT_SIZE);
+        // UPS Input Voltage
+        if (!isnan(sensor_ups_voltage->state)) {
+          float vin = sensor_ups_voltage->state;
+          if (vin > 200.0f) {
+            it.print(10, ty - 2, id(icons_font), icon_plugOn.c_str());
+            it.printf(40, ty, id(main_font), " %.0fV", vin);
+          } else if (vin < 100.0f) {
+            it.print(10, ty - 2, id(icons_font), icon_plugOff.c_str());
+            it.printf(40, ty, id(main_font), " %.0fV", vin);
+          } else {
+            it.printf(10, ty, id(main_font), " %.0fV", vin);
+          }
+        } else {
+          it.printf(10, ty, id(main_font), "---");
+        }
+        // UPS Mode (OL, CHRG, etc.)
+        {
+          auto mode_str = sensor_ups_status->state;
+          if (mode_str == "OL") {
+            it.print(145, ty - 2, id(icons_font), icon_plugOn.c_str());
+            it.printf(175, ty, id(main_font), " OK");
+          } else if (mode_str == "OL CHRG") {
+            it.print(145, ty - 2, id(icons_font), icon_plugOff.c_str());
+            it.printf(175, ty, id(main_font), " CHRG");
+          } else if (mode_str == "OB DISCHRG") {
+            it.print(145, ty - 2, id(icons_font), icon_plugBatt.c_str());
+            it.printf(175, ty, id(main_font), " NO");
+          } else {
+            it.print(145, ty, id(main_font), "---");
+          }
+        }
+        // UPS Battery Charge
+        {
+          float batv = sensor_ups_battery->state;
+          if (isnan(batv)) {
+            it.print(280, ty, id(main_font), "");
+          } else {
+            if (batv == 100.0f) {
+              it.print(280, ty - 2, id(icons_font), icon_battChg.c_str());
+              it.printf(310, ty, id(main_font), " %3s", "OK");
+            } else {
+              it.print(280, ty - 2, id(icons_font), icon_batt70.c_str());
+              it.printf(310, ty, id(main_font), " %.0f%%", batv);
+            }
+          }
+        }
+        // UPS Load
+        {
+          float loadv = sensor_ups_load->state;
+          if (isnan(loadv)) {
+            it.printf(415, ty, id(main_font), "---");
+          } else {
+            if (loadv < 50.0f) {
+              it.print(415, ty - 2, id(icons_font), icon_dbCheck.c_str());
+              it.printf(445, ty, id(main_font), " %.0f%%", loadv);
+            } else {
+              it.print(415, ty - 2, id(icons_font), icon_dbAlert.c_str());
+              it.printf(445, ty, id(main_font), " %.0f%%", loadv);
+            }
+          }
+        }
+      }
+      
+      // =====================================================
+      // ROW 17: PVE SERVICE Header
+      // Header row for PVE SERVICE section.
+      draw_row(1, {540}, ROW_HEIGHT_OTHER);
+      {
+        int row_top = cur_y - ROW_HEIGHT_OTHER;
+        it.print(10, row_top + 8, id(icons_font), id(material_icons_map)["mdi-server"].c_str());
+        int ty = center_text_y(row_top, ROW_HEIGHT_OTHER, TEXT_SIZE);
+        it.printf(60, ty, id(bold_font), "PVE SERVICE");
+      }
+      
+      // =====================================================
+      // ROW 18: CPU Usage – Displays CPU usage for three cores.
+      draw_row(3, {180, 180, 180}, ROW_HEIGHT_OTHER);
+      {
+         int row_top = cur_y - ROW_HEIGHT_OTHER;
+         int ty = center_text_y(row_top, ROW_HEIGHT_OTHER, TEXT_SIZE);
+         it.print(10, ty - 2, id(icons_font), icon_cpu.c_str());
+         int x = 50;
+         it.print(x, ty, id(sensor_number_font), "1");
+         x += 20;
+         it.printf(x, ty, id(main_font), " %.1f%%", sensor_cpu1->state);
+         it.print(190, ty - 2, id(icons_font), icon_cpu.c_str());
+         x = 230;
+         it.print(x, ty, id(sensor_number_font), "2");
+         x += 20;
+         it.printf(x, ty, id(main_font), " %.1f%%", sensor_cpu2->state);
+         it.print(370, ty - 2, id(icons_font), icon_cpu.c_str());
+         x = 410;
+         it.print(x, ty, id(sensor_number_font), "3");
+         x += 20;
+         it.printf(x, ty, id(main_font), " %.1f%%", sensor_cpu3->state);
+      }
+      
+      // =====================================================
+      // ROW 19: Memory and ESP32 T/H – Displays memory usage and ESP temperature/humidity.
+      draw_row(3, {180, 180, 180}, ROW_HEIGHT_OTHER);
+      {
+         int row_top = cur_y - ROW_HEIGHT_OTHER;
+         int ty = center_text_y(row_top, ROW_HEIGHT_OTHER, TEXT_SIZE);
+         it.print(10, ty - 2, id(icons_font), icon_mem.c_str());
+         int x = 50;
+         it.print(x, ty, id(sensor_number_font), "1");
+         x += 20;
+         it.printf(x, ty, id(main_font), " %.0f%%", sensor_mem1->state);
+         it.print(190, ty - 2, id(icons_font), icon_mem.c_str());
+         x = 230;
+         it.print(x, ty, id(sensor_number_font), "2");
+         x += 20;
+         it.printf(x, ty, id(main_font), " %.0f%%", sensor_mem2->state);
+         float m3   = sensor_mem3->state;
+         float t_esp = sensor_esp_temp->state;
+         float h_esp = sensor_esp_hum->state;
+         char m3_buf[10], t_buf[10], h_buf[10];
+         if (isnan(m3)) { strcpy(m3_buf, "---"); } else { sprintf(m3_buf, "%.0f%%", m3); }
+         if (isnan(t_esp)) { strcpy(t_buf, "---"); } else { sprintf(t_buf, "%.0f°", t_esp); }
+         if (isnan(h_esp)) { strcpy(h_buf, "---"); } else { sprintf(h_buf, "%.0f%%", h_esp); }
+         it.print(370, ty - 2, id(icons_font), icon_mem.c_str());
+         x = 410;
+         it.print(x, ty, id(sensor_number_font), "3");
+         x += 20;
+         it.printf(x, ty, id(main_font), " %s T %s H %s", m3_buf, t_buf, h_buf);
+      }
+      // Total display height: 60 + 18*50 = 960px
