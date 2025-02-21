@@ -18,7 +18,7 @@ esphome:
     then:
       - delay: 5s    # Delay for power and bus stabilization
       - lambda: |-
-          id(cpu_speed) = ESP.getCpuFreqMHz();  // Сохранение частоты ЦП
+          id(cpu_speed) = ESP.getCpuFreqMHz();  // Save CPU frequency
       - it8951e.clear         # Delay for power and bus stabilization
       - delay: 100ms
       - it8951e.updateslow    # Update to stabilize the display
