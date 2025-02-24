@@ -96,6 +96,7 @@ This project is licensed under the [MIT License](LICENSE).
 ## Screen Example
 
 ![Screen Example](img/960.png)  
+![Real Screen Example](img/photo.png)
 *Example screen layout displaying sensor data and diagnostic information.*
 
 ---
