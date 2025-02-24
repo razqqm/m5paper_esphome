@@ -98,12 +98,12 @@ This project is licensed under the [MIT License](LICENSE).
 <table>
   <tr>
     <td align="center">
-      <img src="img/960.png" alt="Prototype" height="200">
+      <img src="img/960.png" alt="Prototype" height="400">
       <br>
       <strong>Prototype</strong>
     </td>
     <td align="center">
-      <img src="img/photo.png" alt="Real Screen Photo" height="200">
+      <img src="img/photo.png" alt="Real Screen Photo" height="400">
       <br>
       <strong>Real Screen Photo</strong>
     </td>
