@@ -95,8 +95,20 @@ This project is licensed under the [MIT License](LICENSE).
 
 ## Screen Example
 
-![Screen Example](img/960.png)  
-![Real Screen Example](img/photo.png)
+<table>
+  <tr>
+    <td align="center">
+      <img src="img/960.png" alt="Prototype" height="200">
+      <br>
+      <strong>Prototype</strong>
+    </td>
+    <td align="center">
+      <img src="img/photo.png" alt="Real Screen Photo" height="200">
+      <br>
+      <strong>Real Screen Photo</strong>
+    </td>
+  </tr>
+</table>
 *Example screen layout displaying sensor data and diagnostic information.*
 
 ---
